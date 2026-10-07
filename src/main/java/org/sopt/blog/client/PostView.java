@@ -1,4 +1,7 @@
-package org.sopt.blog.post;
+package org.sopt.blog.client;
+
+import org.sopt.blog.domain.post.entity.Post;
+import org.sopt.blog.domain.post.entity.Category;
 
 import java.util.Scanner;
 
@@ -13,6 +16,19 @@ public class PostView {
         System.out.println("4. 게시글 수정");
         System.out.println("5. 게시글 삭제");
         System.out.println("6. 종료");
+    }
+
+    public Category readCategory() {
+        Category[] categories = Category.values();
+        for (int i = 0; i < categories.length; i++) {
+            System.out.println((i + 1) + ". " + categories[i]);
+        } System.out.print("카테고리 선택: ");
+        return categories[Integer.parseInt(scanner.nextLine()) - 1];
+    }
+
+    public String readAuthor() {
+        System.out.print("저자: ");
+        return scanner.nextLine();
     }
 
     public int readCommand() {
@@ -39,6 +55,8 @@ public class PostView {
         System.out.println("\n=== 게시글 ===");
         System.out.println("제목: " + post.getTitle());
         System.out.println("내용: " + post.getContent());
+        System.out.println("카테고리: " + post.getCategory());
+        System.out.println("저자: " + post.getAuthor());
     }
 
     public void printMessage(String message) {
