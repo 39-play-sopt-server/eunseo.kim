@@ -1,4 +1,4 @@
-package org.sopt.blog.client;
+package org.sopt.blog;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
