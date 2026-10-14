@@ -2,11 +2,14 @@ package org.sopt.blog.domain.post.repository;
 
 import org.sopt.blog.domain.post.entity.Post;
 
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
+import org.springframework.stereotype.Repository;
+
+@Repository
 public class PostRepository {
-    private final List<Post> posts = new ArrayList<>();
+    private final List<Post> posts = new CopyOnWriteArrayList<>();
 
     public void save(Post post) {
         posts.add(post);
