@@ -1,14 +1,23 @@
 package org.sopt.blog.domain.post.entity;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import jakarta.persistence.*;
 
+@Entity
 public class Post {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String title;
     private String content;
+    @Enumerated(EnumType.STRING)
     private Category category;
     private String author;
-    private final AtomicInteger viewCount;
+    private int viewCount;
+
+    protected Post() {
+
+    }
 
     public Post(String title, String content, Category category, String author) {
         if (title.isBlank()) {
@@ -22,15 +31,15 @@ public class Post {
         this.content = content;
         this.category = category;
         this.author = author;
-        this.viewCount = new AtomicInteger(0);
+        this.viewCount = 0;
     }
 
     public int getViewCount() {
-        return viewCount.get();
+        return viewCount;
     }
 
     public void increaseViewCount() {
-        viewCount.incrementAndGet();   // 원자적 +1
+        this.viewCount++;
     }
 
     public String getTitle() {
@@ -39,6 +48,10 @@ public class Post {
 
     public String getContent() {
         return content;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public Category getCategory() {
