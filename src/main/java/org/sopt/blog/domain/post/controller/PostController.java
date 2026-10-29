@@ -39,12 +39,13 @@ public class PostController implements PostControllerDocs {
     // 전체 목록 조회
     @GetMapping
     public ResponseEntity<ApiResponse<PostPageResponse>> getAllPosts(
+            @RequestParam(required = false) String title,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size,
             @RequestParam(required = false) Category category
     ) {
         return ResponseEntity.ok(
-                ApiResponse.success(200, "게시글 목록 조회에 성공했습니다.", postService.getPosts(page, size, category))
+                ApiResponse.success(200, "게시글 목록 조회에 성공했습니다.", postService.getPosts(page, size, category, title))
         );
     }
 

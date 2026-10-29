@@ -31,6 +31,7 @@ public interface PostControllerDocs {
     })
     @Operation(summary = "게시글 전체 목록 조회", description = "전체 게시글의 요약 목록을 반환합니다.")
     ResponseEntity<ApiResponse<PostPageResponse>> getAllPosts(
+            @RequestParam(required = false) String title,
             @Min(0) int page,
             @Min(1) @Max(100) int size,
             @RequestParam(required = false) Category category
