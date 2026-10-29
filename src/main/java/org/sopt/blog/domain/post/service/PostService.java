@@ -1,7 +1,10 @@
 package org.sopt.blog.domain.post.service;
 
+import org.sopt.blog.domain.member.entity.Member;
+import org.sopt.blog.domain.member.repository.MemberRepository;
 import org.sopt.blog.domain.post.controller.dto.request.PostUpdateRequest;
 import org.sopt.blog.domain.post.entity.Category;
+import org.springframework.data.domain.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.sopt.blog.domain.post.controller.dto.request.PostRequest;
 import org.sopt.blog.domain.post.controller.dto.response.PostPageResponse;
@@ -18,40 +21,45 @@ import java.util.List;
 @Service
 public class PostService {
     private final PostRepository postRepository;
+    private final MemberRepository memberRepository;
 
-    public PostService(PostRepository postRepository) {
+    public PostService(PostRepository postRepository, MemberRepository memberRepository) {
         this.postRepository = postRepository;
+        this.memberRepository = memberRepository;
     }
 
     // 게시글 작성
     public void createPost(PostRequest request) {
+        Member member = memberRepository.findById(request.memberId())
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND, "id=" + request.memberId() + " 번 회원이 존재하지 않습니다."));
+        if (member.isDeleted()) {
+            throw new CustomException(ErrorCode.MEMBER_NOT_FOUND, "id=" + request.memberId() + " 번 회원이 이미 탈퇴했습니다.");
+        }
         Post post = new Post(
                 request.title(),
                 request.content(),
                 request.category(),
-                request.author()
+                member
         );
         postRepository.save(post);
     }
 
     // 전체 목록 조회
     public PostPageResponse getPosts(int page, int size, Category category) {
-        List<Post> list;
-        if (category == null) {
-            list = postRepository.findAll();
-        } else {
-            list = postRepository.findByCategory(category);
-        }
+        // Pageable 생성 (최신순 정렬)
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        int totalCount = list.size();
-        int from = page * size;
-        int to = Math.min(from + size, totalCount);
+        // 카테고리 유무로 분기 → Page<Post> 가져오기
+        Page<Post> postPage = (category == null)
+                ? postRepository.findAllWithMember(pageable)
+                : postRepository.findByCategoryWithMember(category, pageable);
 
-        List<PostSummaryResponse> pageItems = (from >= totalCount)
-                ? List.of()
-                : list.subList(from, to).stream().map(PostSummaryResponse::from).toList();
-
-        return PostPageResponse.of(pageItems, page, size, totalCount);
+        // Page<Post> → List<PostSummaryResponse> 변환
+        List<PostSummaryResponse> pageItems = postPage.getContent().stream()
+                .map(PostSummaryResponse::from)
+                .toList();
+        // PostPageResponse로 포장
+        return PostPageResponse.of(pageItems, page, size, postPage.getTotalElements());
     }
 
     // 단건 상세 조회
