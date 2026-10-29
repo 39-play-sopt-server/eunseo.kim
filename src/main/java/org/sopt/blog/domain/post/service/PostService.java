@@ -4,7 +4,9 @@ import org.sopt.blog.domain.member.entity.Member;
 import org.sopt.blog.domain.member.repository.MemberRepository;
 import org.sopt.blog.domain.post.controller.dto.request.PostUpdateRequest;
 import org.sopt.blog.domain.post.entity.Category;
+import org.sopt.blog.domain.post.repository.PostSpecifications;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import org.sopt.blog.domain.post.controller.dto.request.PostRequest;
 import org.sopt.blog.domain.post.controller.dto.response.PostPageResponse;
@@ -45,20 +47,23 @@ public class PostService {
     }
 
     // 전체 목록 조회
-    public PostPageResponse getPosts(int page, int size, Category category) {
+    public PostPageResponse getPosts(int page, int size, Category category, String title) {
         // Pageable 생성 (최신순 정렬)
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        // 카테고리 유무로 분기 → Page<Post> 가져오기
-        Page<Post> postPage = (category == null)
-                ? postRepository.findAllWithMember(pageable)
-                : postRepository.findByCategoryWithMember(category, pageable);
+        Specification<Post> spec = Specification.allOf(PostSpecifications.fetchMember());
+        if (title != null && !title.isBlank()) {
+            spec = spec.and(PostSpecifications.titleContains(title));
+        }
+        if (category != null) {
+            spec = spec.and(PostSpecifications.hasCategory(category));
+        }
 
-        // Page<Post> → List<PostSummaryResponse> 변환
+        Page<Post> postPage = postRepository.findAll(spec, pageable);
+
         List<PostSummaryResponse> pageItems = postPage.getContent().stream()
                 .map(PostSummaryResponse::from)
                 .toList();
-        // PostPageResponse로 포장
         return PostPageResponse.of(pageItems, page, size, postPage.getTotalElements());
     }
 
