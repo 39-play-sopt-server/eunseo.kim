@@ -1,14 +1,19 @@
 package org.sopt.blog.domain.post.controller.dto.response;
 
+import org.sopt.blog.domain.member.entity.Member;
 import org.sopt.blog.domain.post.entity.Post;
 
 // 목록 조회용 DTO
 public record PostSummaryResponse(
         Long id,
-        String title
+        String title,
+        String authorName
 ) {
     public static PostSummaryResponse from(Post post) {
-        return new PostSummaryResponse(post.getId(), post.getTitle());
+        Member member = post.getMember();
+        String authorName = member.isDeleted() ? "탈퇴한 회원" : member.getName();
+
+        return new PostSummaryResponse(post.getId(), post.getTitle(), authorName);
     }
 }
 
