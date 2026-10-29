@@ -47,7 +47,7 @@ public class PostService {
     }
 
     // 전체 목록 조회
-    public PostPageResponse getPosts(int page, int size, Category category, String title) {
+    public PostPageResponse getPosts(int page, int size, Category category, String title, Long memberId) {
         // Pageable 생성 (최신순 정렬)
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
@@ -57,6 +57,9 @@ public class PostService {
         }
         if (category != null) {
             spec = spec.and(PostSpecifications.hasCategory(category));
+        }
+        if (memberId != null) {
+            spec = spec.and(PostSpecifications.hasMember(memberId));
         }
 
         Page<Post> postPage = postRepository.findAll(spec, pageable);

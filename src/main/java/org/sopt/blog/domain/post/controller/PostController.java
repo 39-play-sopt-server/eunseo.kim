@@ -42,10 +42,11 @@ public class PostController implements PostControllerDocs {
             @RequestParam(required = false) String title,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size,
-            @RequestParam(required = false) Category category
+            @RequestParam(required = false) Category category,
+            @RequestParam(required = false) Long memberId
     ) {
         return ResponseEntity.ok(
-                ApiResponse.success(200, "게시글 목록 조회에 성공했습니다.", postService.getPosts(page, size, category, title))
+                ApiResponse.success(200, "게시글 목록 조회에 성공했습니다.", postService.getPosts(page, size, category, title, memberId))
         );
     }
 

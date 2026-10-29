@@ -23,4 +23,8 @@ public class PostSpecifications {
             return cb.conjunction();  // "항상 참" 조건 (= 조건 없음)
         };
     }
+
+    public static Specification<Post> hasMember(Long memberId) {
+        return (root, query, cb) -> cb.equal(root.get("member").get("id"), memberId);
+    }
 }

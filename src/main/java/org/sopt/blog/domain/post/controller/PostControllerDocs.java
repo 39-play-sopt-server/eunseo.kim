@@ -34,7 +34,8 @@ public interface PostControllerDocs {
             @RequestParam(required = false) String title,
             @Min(0) int page,
             @Min(1) @Max(100) int size,
-            @RequestParam(required = false) Category category
+            @RequestParam(required = false) Category category,
+            @RequestParam(required = false) Long memberId
     );
 
     @ApiResponses(value = {
