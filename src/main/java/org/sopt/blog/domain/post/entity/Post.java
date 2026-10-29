@@ -27,6 +27,9 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
+    @Column(nullable = false)
+    private int likeCount;
+
     protected Post() {
 
     }
@@ -47,6 +50,7 @@ public class Post extends BaseEntity {
         this.category = category;
         this.member = member;
         this.viewCount = 0;
+        this.likeCount = 0;
     }
 
     public int getViewCount() {
@@ -75,6 +79,20 @@ public class Post extends BaseEntity {
 
     public Member getMember() {
         return member;
+    }
+
+    public int getLikeCount() {
+        return likeCount;
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
     }
 
     public void updateTitle(String title) {
