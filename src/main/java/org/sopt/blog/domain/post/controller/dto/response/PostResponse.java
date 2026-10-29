@@ -10,7 +10,8 @@ public record PostResponse (
     String content,
     Category category,
     String authorName,
-    int viewCount
+    int viewCount,
+    int likeCount
 ) {
 
     public static PostResponse from(Post post) {
@@ -23,7 +24,8 @@ public record PostResponse (
                 post.getContent(),
                 post.getCategory(),
                 authorName,
-                post.getViewCount()
+                post.getViewCount(),
+                post.getLikeCount()
         );
     }
 }
