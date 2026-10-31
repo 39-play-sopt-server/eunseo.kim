@@ -13,7 +13,14 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 
     // 게시글 관련
-    POST_NOT_FOUND(1103, HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
+    POST_NOT_FOUND(1103, HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
+
+    // 회원 관련
+    MEMBER_NOT_FOUND(1203, HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."),
+
+    // 좋아요 관련
+    LIKE_ALREADY_EXISTS(1301, HttpStatus.CONFLICT, "이미 좋아요를 눌렀습니다."),
+    LIKE_NOT_FOUND(1302, HttpStatus.NOT_FOUND, "좋아요를 누르지 않았습니다.");
 
     private final int code;
     private final HttpStatus httpStatus;

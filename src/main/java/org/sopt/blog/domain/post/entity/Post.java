@@ -1,36 +1,64 @@
 package org.sopt.blog.domain.post.entity;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import jakarta.persistence.*;
+import org.sopt.blog.domain.member.entity.Member;
+import org.sopt.blog.global.common.entity.BaseEntity;
 
-public class Post {
+@Entity
+public class Post extends BaseEntity {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 100)
     private String title;
-    private String content;
-    private Category category;
-    private String author;
-    private final AtomicInteger viewCount;
 
-    public Post(String title, String content, Category category, String author) {
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Category category;
+
+    private int viewCount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
+
+    @Column(nullable = false)
+    private int likeCount;
+
+    protected Post() {
+
+    }
+
+    public Post(String title, String content, Category category, Member member) {
         if (title.isBlank()) {
             throw new IllegalArgumentException("제목을 입력해주세요.");
         }
         if (content.isBlank()) {
             throw new IllegalArgumentException("내용을 입력해주세요.");
         }
+        if (member == null) {
+            throw new IllegalArgumentException("작성자는 필수입니다.");
+        }
 
         this.title = title;
         this.content = content;
         this.category = category;
-        this.author = author;
-        this.viewCount = new AtomicInteger(0);
+        this.member = member;
+        this.viewCount = 0;
+        this.likeCount = 0;
     }
 
     public int getViewCount() {
-        return viewCount.get();
+        return viewCount;
     }
 
     public void increaseViewCount() {
-        viewCount.incrementAndGet();   // 원자적 +1
+        this.viewCount++;
     }
 
     public String getTitle() {
@@ -41,12 +69,30 @@ public class Post {
         return content;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public Category getCategory() {
         return category;
     }
 
-    public String getAuthor() {
-        return author;
+    public Member getMember() {
+        return member;
+    }
+
+    public int getLikeCount() {
+        return likeCount;
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
     }
 
     public void updateTitle(String title) {

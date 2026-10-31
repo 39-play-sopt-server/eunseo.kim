@@ -1,23 +1,31 @@
 package org.sopt.blog.domain.post.controller.dto.response;
 
+import org.sopt.blog.domain.member.entity.Member;
 import org.sopt.blog.domain.post.entity.Category;
 import org.sopt.blog.domain.post.entity.Post;
 
 public record PostResponse (
+    Long id,
     String title,
     String content,
     Category category,
-    String author,
-    int viewCount
+    String authorName,
+    int viewCount,
+    int likeCount
 ) {
-    // from: static factory method(Post 엔티티를 넣으면, PostResponse로 변환해서 돌려주는 메서드)
+
     public static PostResponse from(Post post) {
+        Member member = post.getMember();
+        String authorName = member.isDeleted() ? "탈퇴한 회원" : member.getName();
+
         return new PostResponse(
+                post.getId(),
                 post.getTitle(),
                 post.getContent(),
                 post.getCategory(),
-                post.getAuthor(),
-                post.getViewCount()
+                authorName,
+                post.getViewCount(),
+                post.getLikeCount()
         );
     }
 }

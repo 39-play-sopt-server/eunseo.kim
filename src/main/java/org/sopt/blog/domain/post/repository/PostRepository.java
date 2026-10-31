@@ -1,30 +1,20 @@
 package org.sopt.blog.domain.post.repository;
 
 import org.sopt.blog.domain.post.entity.Post;
-
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.List;
-
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+
+import java.util.Optional;
 
 @Repository
-public class PostRepository {
-    private final List<Post> posts = new CopyOnWriteArrayList<>();
-
-    public void save(Post post) {
-        posts.add(post);
-    }
-    public List<Post> findAll() {
-        return posts;
-    }
-    public Post findByIndex(int index) {
-        return posts.get(index);
-    }
-    public void deleteByIndex(int index) {
-        posts.remove(index);
-    }
-    public int size() {
-        return posts.size();
-    }
+public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificationExecutor<Post> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Post p where p.id = :id")
+    Optional<Post> findByIdForUpdate(@Param("id") Long id);
 }
 

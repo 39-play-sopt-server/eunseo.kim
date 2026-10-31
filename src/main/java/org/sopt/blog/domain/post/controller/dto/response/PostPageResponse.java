@@ -6,11 +6,11 @@ public record PostPageResponse(
         List<PostSummaryResponse> posts,
         int page,
         int size,
-        int totalCount,
+        long totalCount,
         int totalPages,
         boolean hasNext
 ) {
-    public static PostPageResponse of(List<PostSummaryResponse> posts, int page, int size, int totalCount) {
+    public static PostPageResponse of(List<PostSummaryResponse> posts, int page, int size, long totalCount) {
         int totalPages = (int) Math.ceil((double) totalCount / size);
         boolean hasNext = page < totalPages - 1;
         return new PostPageResponse(posts, page, size, totalCount, totalPages, hasNext);
