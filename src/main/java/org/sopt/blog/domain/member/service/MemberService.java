@@ -2,8 +2,6 @@ package org.sopt.blog.domain.member.service;
 
 import org.sopt.blog.domain.member.entity.Member;
 import org.sopt.blog.domain.member.repository.MemberRepository;
-import org.sopt.blog.domain.member.controller.dto.request.MemberRequest;
-import org.sopt.blog.domain.member.controller.dto.response.MemberResponse;
 import org.sopt.blog.global.common.exception.CustomException;
 import org.sopt.blog.global.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -18,14 +16,6 @@ public class MemberService {
         this.memberRepository = memberRepository;
     }
 
-    // 회원 생성
-    public MemberResponse createMember(MemberRequest request) {
-        Member member = new Member(request.name());
-        Member saved = memberRepository.save(member);
-        return MemberResponse.from(saved);
-    }
-
-    // 회원 삭제
     @Transactional
     public void deleteMember(Long memberId) {
         Member member = memberRepository.findById(memberId)

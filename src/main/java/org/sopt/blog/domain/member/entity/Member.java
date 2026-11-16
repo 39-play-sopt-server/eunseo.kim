@@ -15,18 +15,25 @@ public class Member extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
     @Column(name = "deleted_at")   // nullable 기본값 (null = 활성 회원)
     private LocalDateTime deletedAt;
 
     // JPA용 기본 생성자
     protected Member() {}
 
-    // 생성자
-    public Member(String name) {
-        if (name.isBlank()) {
+    public Member(String name, String email, String password) {
+        if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("이름을 입력해주세요.");
         }
         this.name = name;
+        this.email = email;
+        this.password = password;
     }
 
     public String getName() {
@@ -35,6 +42,10 @@ public class Member extends BaseEntity {
 
     public Long getId() {
         return id;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     public void markDeleted() {
