@@ -2,6 +2,7 @@ package org.sopt.blog.domain.post.controller.dto.response;
 
 import org.sopt.blog.domain.member.entity.Member;
 import org.sopt.blog.domain.post.entity.Post;
+import org.springframework.web.util.HtmlUtils;
 
 // 목록 조회용 DTO
 public record PostSummaryResponse(
@@ -13,7 +14,11 @@ public record PostSummaryResponse(
         Member member = post.getMember();
         String authorName = member.isDeleted() ? "탈퇴한 회원" : member.getName();
 
-        return new PostSummaryResponse(post.getId(), post.getTitle(), authorName);
+        return new PostSummaryResponse(
+                post.getId(),
+                HtmlUtils.htmlEscape(post.getTitle()),
+                HtmlUtils.htmlEscape(authorName)
+        );
     }
 }
 
