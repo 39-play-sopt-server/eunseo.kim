@@ -3,6 +3,7 @@ package org.sopt.blog.domain.post.controller.dto.response;
 import org.sopt.blog.domain.member.entity.Member;
 import org.sopt.blog.domain.post.entity.Category;
 import org.sopt.blog.domain.post.entity.Post;
+import org.springframework.web.util.HtmlUtils;
 
 public record PostResponse (
     Long id,
@@ -20,10 +21,10 @@ public record PostResponse (
 
         return new PostResponse(
                 post.getId(),
-                post.getTitle(),
-                post.getContent(),
+                HtmlUtils.htmlEscape(post.getTitle()),
+                HtmlUtils.htmlEscape(post.getContent()),
                 post.getCategory(),
-                authorName,
+                HtmlUtils.htmlEscape(authorName),
                 post.getViewCount(),
                 post.getLikeCount()
         );

@@ -1,6 +1,6 @@
 # Architecture
 
-SOPT 39기 2차/3차 서버 과제 — Spring Boot + JPA + MySQL 기반 블로그 API 아키텍처 문서.
+SOPT 39기 서버 과제 — Spring Boot + JPA + MySQL 기반 블로그 API 아키텍처 문서.
 
 ## 1. 레이어 구조
 
@@ -9,12 +9,17 @@ Client
   │
   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Controller  (PostController, MemberController, LikeController) │  ← HTTP, @Valid, Swagger
+│  Security Filter (JwtAuthenticationFilter)                      │  ← JWT 검증, SecurityContext 설정
 └─────────────────────────────────────────────────────────────┘
   │
   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Service     (PostService, MemberService, LikeService)      │  ← 트랜잭션, 비즈니스 로직
+│  Controller  (Auth, Post, Member, Like)                      │  ← HTTP, @Valid, Swagger
+└─────────────────────────────────────────────────────────────┘
+  │
+  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Service     (Auth, Token, OAuth, Post, Member, Like)       │  ← 트랜잭션, 비즈니스 로직
 └─────────────────────────────────────────────────────────────┘
   │
   ▼
@@ -24,7 +29,7 @@ Client
   │
   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Entity      (Post, Member, Like, Category, BaseEntity)     │  ← JPA 매핑된 도메인
+│  Entity      (Post, Member, Like, OAuthAccount, RefreshToken)│  ← JPA 매핑된 도메인
 └─────────────────────────────────────────────────────────────┘
   │
   ▼
@@ -55,21 +60,34 @@ org.sopt.blog
 │   │
 │   ├── member
 │   │   ├── controller / service / repository
-│   │   └── entity           (Member)         # Soft Delete (deletedAt)
+│   │   └── entity           (Member, MemberRole) # Soft Delete + ROLE_USER/ROLE_ADMIN
 │   │
-│   └── like
-│       ├── controller / service / repository
-│       └── entity           (Like)           # UNIQUE(post_id, member_id)
+│   ├── like
+│   │   ├── controller / service / repository
+│   │   └── entity           (Like)           # UNIQUE(post_id, member_id)
+│   │
+│   └── auth
+│       ├── controller      (AuthController, LoginRequest, SignupRequest)
+│       ├── service         (AuthService, TokenService, OAuthLoginService)
+│       ├── client          (OAuthClient, KakaoOAuthClient)
+│       ├── repository      (RefreshTokenRepository, RevokedAccessTokenRepository,
+│       │                    OAuthAccountRepository)
+│       ├── entity          (RefreshToken, RevokedAccessToken, OAuthAccount)
+│       └── config          (KakaoProperties, OAuthProperties)
 │
 └── global
-    └── common
-        ├── entity           (BaseEntity: createdAt, updatedAt)
-        ├── response         (ApiResponse)
-        └── exception        (ErrorCode, CustomException, GlobalExceptionHandler)
+    ├── common
+    │   ├── entity           (BaseEntity: createdAt, updatedAt)
+    │   ├── response         (ApiResponse)
+    │   └── exception        (ErrorCode, CustomException, GlobalExceptionHandler)
+    ├── config               (SecurityConfig, WebConfig, RestClientConfig)
+    └── security             (JwtProvider, JwtAuthenticationFilter, TokenPayload)
 ```
 
 - **domain**: 비즈니스 도메인별로 분리. 각 도메인은 controller/service/repository/entity를 내부에 둠.
+- **domain/auth**: 이메일 로그인, Access/Refresh Token, OAuth 로그인처럼 인증 도메인에만 속하는 코드.
 - **global/common**: 공통 응답 포맷, 예외 처리, 공통 엔티티 상위 클래스.
+- **global/security**: 도메인 비즈니스 로직과 분리된 JWT 파싱 및 Spring Security filter-chain 구성 요소.
 
 ## 3. 핵심 설계 결정
 
@@ -148,10 +166,19 @@ Optional<Post> findByIdForUpdate(@Param("id") Long id);
 `Member`는 `deletedAt` 컬럼을 두고 `markDeleted()`로 논리 삭제. 게시글 FK는 유지되므로 "탈퇴한 회원이 쓴 글" 표시가 가능. 자세한 선택 근거는 `docs/week3.md` 참조.
 
 ### 3.8 Swagger 분리 — `*ControllerDocs` 인터페이스
-`@Operation`, `@ApiResponses` 등 문서화 어노테이션을 별도 인터페이스에 두고 Controller는 `implements ...Docs`로 상속만. 본문 가독성 유지.
+`@Operation`, `@ApiResponses` 등 문서화 어노테이션을 별도 인터페이스에 두고 Controller는 `implements ...Docs`로 상속만. 현재 게시글 API가 이 방식을 사용해 본문 가독성을 유지한다.
 
 ### 3.9 DTO = record
 불변 요청/응답 DTO는 Java `record`. 필드/생성자/accessor/`equals`/`hashCode`/`toString` 자동 생성.
+
+### 3.10 인증·인가 — Stateless JWT + DB 기반 Refresh 상태
+
+- `SecurityConfig`는 세션을 만들지 않는 `STATELESS` 정책과 `JwtAuthenticationFilter`를 사용한다.
+- Access Token은 서명, issuer, 만료, token type, role claim을 검증해 `SecurityContext`에 `memberId`와 `ROLE_*` 권한을 설정한다.
+- Refresh Token 원문은 DB에 저장하지 않고 SHA-256 해시, `jti`, family, 상태를 저장한다. 재발급 때는 family의 활성 행을 비관적 잠금으로 잡고 회전한다.
+- 로그아웃·탈퇴한 Access Token은 `RevokedAccessToken` blacklist로 만료 시각까지 차단한다. 탈퇴한 회원도 filter에서 차단한다.
+- Refresh Cookie가 자동 전송되는 `/auth/reissue`에는 double-submit CSRF 검증을 적용한다. 게시글·회원 응답 DTO에서는 사용자 입력을 HTML escape한다.
+- OAuth는 `OAuthClient` 인터페이스와 `OAuthProvider`를 경계로 분리한다. 카카오 외 provider는 구현체와 enum 값을 추가해 공통 로그인 흐름을 재사용할 수 있다.
 
 ## 4. API 엔드포인트
 
@@ -164,12 +191,22 @@ Optional<Post> findByIdForUpdate(@Param("id") Long id);
 | PUT    | `/posts/{postId}`  | 수정 | - |
 | DELETE | `/posts/{postId}`  | 삭제 | - |
 
+### Auth
+| Method | Path | 설명 |
+|--------|------|------|
+| POST   | `/auth/signup` | 회원 가입 |
+| POST   | `/auth/login` | 로그인 및 Access/Refresh 발급 |
+| POST   | `/auth/reissue` | Refresh Cookie 기반 Access 재발급 |
+| POST   | `/auth/logout` | Access/Refresh 무효화 |
+| DELETE | `/auth/withdraw` | 탈퇴 (Soft Delete) 및 토큰 무효화 |
+| GET    | `/auth/{provider}` | OAuth 인가 페이지로 리다이렉트 |
+| GET    | `/auth/{provider}/callback` | OAuth 인가 코드 callback |
+
 ### Member
 | Method | Path | 설명 |
 |--------|------|------|
-| POST   | `/members`             | 회원 가입 |
-| GET    | `/members/{memberId}`  | 단건 조회 |
-| DELETE | `/members/{memberId}`  | 탈퇴 (Soft Delete) |
+| GET    | `/members/me` | 현재 인증된 회원 ID 조회 |
+| GET    | `/members` | 관리자 전용 회원 목록 조회 |
 
 ### Like
 | Method | Path | 설명 |
@@ -208,6 +245,6 @@ ResponseEntity<ApiResponse<PostResponse>>
 ## 6. 향후 개선 포인트
 
 - **검색 성능**: `title LIKE '%키워드%'`는 B-tree 인덱스가 안 먹음. FULLTEXT 인덱스 혹은 외부 검색 엔진 도입 검토.
-- **인증/인가**: 현재 `memberId`를 요청 파라미터로 받음. 로그인 세션/JWT 기반으로 전환 필요.
+- **인증/인가**: JWT Access/Refresh 기반 인증을 적용했다. 구현·클라이언트 계약, CSRF/XSS 방어, 세션/JWT/OAuth 키워드 정리는 [`week6.md`](./week6.md)를 참조.
 - **테스트**: Controller / Service / Repository 단위 + 통합 테스트 보강 (특히 좋아요 동시성 재현 테스트).
 - **캐싱**: 조회수 증가는 매 요청마다 UPDATE. 핫 포스트는 Redis + 배치 flush로 부하 분산 가능.

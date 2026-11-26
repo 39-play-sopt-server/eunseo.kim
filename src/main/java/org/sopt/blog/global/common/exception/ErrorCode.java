@@ -11,6 +11,11 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED(405, HttpStatus.METHOD_NOT_ALLOWED, "허용되지 않은 HTTP 메서드입니다."),
     NOT_FOUND(404, HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
     INTERNAL_SERVER_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
+    // 인증 관련
+    INVALID_ACCESS_TOKEN(1402, HttpStatus.UNAUTHORIZED, "유효하지 않은 Access Token입니다."),
+    INVALID_REFRESH_TOKEN(1401, HttpStatus.UNAUTHORIZED, "유효하지 않은 Refresh Token입니다."),
+    ACCESS_DENIED(1403, HttpStatus.FORBIDDEN, "권한이 없습니다."),
+    INVALID_CSRF_TOKEN(1404, HttpStatus.FORBIDDEN, "CSRF 토큰이 유효하지 않습니다."),
 
     // 게시글 관련
     POST_NOT_FOUND(1103, HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),

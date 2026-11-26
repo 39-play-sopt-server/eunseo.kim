@@ -19,7 +19,34 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
+  issuer: sopt-blog
   access-token-expiration: 1800000 # 30분 (ms)
+  refresh-token-expiration: 1209600000 # 14일
+  token-cleanup-cron: ${JWT_TOKEN_CLEANUP_CRON:0 0 3 * * *}
+  refresh-cookie:
+    name: refreshToken
+    path: /auth
+    secure: ${JWT_REFRESH_COOKIE_SECURE:true}
+    same-site: Strict
 
 server:
   forward-headers-strategy: framework
+
+admin:
+  bootstrap:
+    email: ${ADMIN_EMAIL:}
+
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY}
+  client-secret: ${KAKAO_CLIENT_SECRET}
+  redirect-uri: ${KAKAO_REDIRECT_URI}
+
+oauth:
+  success-redirect-uri: ${FRONTEND_OAUTH_SUCCESS_URL:http://localhost:3000}
+
+  state-cookie:
+    name: oauthState
+    path: /auth
+    secure: ${OAUTH_STATE_COOKIE_SECURE:true}
+    same-site: Lax
+    max-age-seconds: 300
