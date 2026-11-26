@@ -5,10 +5,13 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.sopt.blog.domain.auth.repository.RevokedAccessTokenRepository;
+import org.sopt.blog.domain.member.repository.MemberRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,11 +19,19 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private final MemberRepository memberRepository;
 
     private final JwtProvider jwtProvider;
+    private final RevokedAccessTokenRepository revokedAccessTokenRepository;
 
-    public JwtAuthenticationFilter(JwtProvider jwtProvider) {
+    public JwtAuthenticationFilter(
+            JwtProvider jwtProvider,
+            RevokedAccessTokenRepository revokedAccessTokenRepository,
+            MemberRepository memberRepository
+    ) {
         this.jwtProvider = jwtProvider;
+        this.revokedAccessTokenRepository = revokedAccessTokenRepository;
+        this.memberRepository = memberRepository;
     }
 
     @Override
@@ -31,11 +42,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null) {
             try {
-                Long memberId = jwtProvider.getMemberId(token);
+                TokenPayload payload = jwtProvider.parseAccessToken(token);
+                if (revokedAccessTokenRepository.existsByJti(payload.jti())
+                        || !memberRepository.existsByIdAndDeletedAtIsNull(payload.memberId())) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
-                // 인증 완료된 Authentication 생성 후 SecurityContext에 저장
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(memberId, null, List.of());
+                        new UsernamePasswordAuthenticationToken(
+                                payload.memberId(),
+                                null,
+                                List.of(new SimpleGrantedAuthority(payload.role().name()))
+                        );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException | IllegalArgumentException e) {
                 // 유효하지 않은 토큰이면 인증 정보를 저장하지 않음
