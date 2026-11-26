@@ -3,6 +3,7 @@ package org.sopt.blog.domain.post.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -22,8 +23,11 @@ public interface PostControllerDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "작성 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효성 검증 실패")
     })
-    @Operation(summary = "게시글 작성", description = "제목, 내용, 카테고리, 작성자를 받아 게시글을 작성합니다.")
-    ResponseEntity<ApiResponse<Void>> createPost(@Valid PostRequest request);
+    @Operation(summary = "게시글 작성", description = "제목, 내용 카테고리, 작성자를 받아 게시글을 작성합니다.")
+    ResponseEntity<ApiResponse<Void>> createPost(
+            @Parameter(hidden = true) Long memberId,
+            @Valid PostRequest request
+    );
 
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
@@ -51,12 +55,19 @@ public interface PostControllerDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     })
     @Operation(summary = "게시글 수정", description = "postId로 게시글을 수정합니다.")
-    ResponseEntity<ApiResponse<Void>> updatePost(Long postId, @Valid PostUpdateRequest request);
+    ResponseEntity<ApiResponse<Void>> updatePost(
+            Long postId,
+            @Parameter(hidden = true) Long memberId,
+            @Valid PostUpdateRequest request
+    );
 
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     })
     @Operation(summary = "게시글 삭제", description = "postId로 게시글을 삭제합니다.")
-    ResponseEntity<ApiResponse<Void>> deletePost(Long postId);
+    ResponseEntity<ApiResponse<Void>> deletePost(
+            Long postId,
+            @Parameter(hidden = true) Long memberId
+    );
 }

@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import jakarta.validation.Valid;
 
@@ -29,8 +30,11 @@ public class PostController implements PostControllerDocs {
 
     // 게시글 작성
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createPost(@Valid @RequestBody PostRequest request) {
-        postService.createPost(request);
+    public ResponseEntity<ApiResponse<Void>> createPost(
+            @AuthenticationPrincipal Long memberId,
+            @Valid @RequestBody PostRequest request
+    ) {
+        postService.createPost(request, memberId);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(201, "게시글이 작성되었습니다."));
@@ -60,15 +64,22 @@ public class PostController implements PostControllerDocs {
 
     // 게시글 수정
     @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponse<Void>> updatePost(@PathVariable Long postId, @Valid @RequestBody PostUpdateRequest request) {
-        postService.updatePost(postId, request);
+    public ResponseEntity<ApiResponse<Void>> updatePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal Long memberId,
+            @Valid @RequestBody PostUpdateRequest request
+    ) {
+        postService.updatePost(postId, request, memberId);
         return ResponseEntity.ok(ApiResponse.success(200, "게시글이 수정되었습니다."));
     }
 
     // 게시글 삭제
     @DeleteMapping("/{postId}")
-    public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long postId) {
-        postService.deletePost(postId);
+    public ResponseEntity<ApiResponse<Void>> deletePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal Long memberId
+    ) {
+        postService.deletePost(postId, memberId);
         return ResponseEntity.ok(ApiResponse.success(200, "게시글이 삭제되었습니다."));
     }
 }

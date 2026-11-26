@@ -31,11 +31,12 @@ public class PostService {
     }
 
     // 게시글 작성
-    public void createPost(PostRequest request) {
-        Member member = memberRepository.findById(request.memberId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND, "id=" + request.memberId() + " 번 회원이 존재하지 않습니다."));
+    @Transactional
+    public void createPost(PostRequest request, Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND, "id=" + memberId + " 번 회원이 존재하지 않습니다."));
         if (member.isDeleted()) {
-            throw new CustomException(ErrorCode.MEMBER_NOT_FOUND, "id=" + request.memberId() + " 번 회원이 이미 탈퇴했습니다.");
+            throw new CustomException(ErrorCode.MEMBER_NOT_FOUND, "id=" + memberId + " 번 회원이 이미 탈퇴했습니다.");
         }
         Post post = new Post(
                 request.title(),
@@ -81,16 +82,30 @@ public class PostService {
 
     // 게시글 수정
     @Transactional
-    public void updatePost(Long id, PostUpdateRequest request) {
-        Post post = findPost(id);
+    public void updatePost(Long postId, PostUpdateRequest request, Long memberId) {
+        Post post = findPost(postId);
+        validatePostOwner(post, memberId);
+
         post.updateTitle(request.title());
         post.updateContent(request.content());
     }
 
     // 게시글 삭제
     @Transactional
-    public void deletePost(Long id) {
-        postRepository.deleteById(id);
+    public void deletePost(Long postId, Long memberId) {
+        Post post = findPost(postId);
+        validatePostOwner(post, memberId);
+
+        postRepository.delete(post);
+    }
+
+    private void validatePostOwner(Post post, Long memberId) {
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new CustomException(
+                    ErrorCode.ACCESS_DENIED,
+                    "본인의 게시글만 수정하거나 삭제할 수 있습니다."
+            );
+        }
     }
 
     // index로 Post 엔티티 찾기 + 유효성 검증
