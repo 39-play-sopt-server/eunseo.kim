@@ -4,44 +4,126 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
+import io.jsonwebtoken.JwtBuilder;
+
 import org.springframework.stereotype.Component;
+import org.sopt.blog.domain.member.entity.MemberRole;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtProvider {
 
+    private static final String TOKEN_TYPE_CLAIM = "tokenType";
+    private static final String ROLE_CLAIM = "role";
     private final SecretKey secretKey;
-    private final long accessTokenExpiration;
+    private final JwtProperties jwtProperties;
 
-    public JwtProvider(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-token-expiration}") long accessTokenExpiration
-    ) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-        this.accessTokenExpiration = accessTokenExpiration;
+    public JwtProvider(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+        this.secretKey = Keys.hmacShaKeyFor(
+                Decoders.BASE64.decode(jwtProperties.getSecret())
+        );
     }
 
-    public String createAccessToken(Long memberId) {
+    public String createAccessToken(Long memberId, MemberRole role) {
+        return createToken(
+                memberId,
+                TokenType.ACCESS,
+                role,
+                jwtProperties.getAccessTokenExpiration()
+        );
+    }
+
+    public String createRefreshToken(Long memberId) {
+        return createToken(
+                memberId,
+                TokenType.REFRESH,
+                null,
+                jwtProperties.getRefreshTokenExpiration()
+        );
+    }
+
+    private String createToken(
+            Long memberId,
+            TokenType tokenType,
+            MemberRole role,
+            long expiration
+    ) {
         Date now = new Date();
 
-        return Jwts.builder()
-                .subject(String.valueOf(memberId))   // 누구의 토큰인지
-                .issuedAt(now)                       // 발급 시각
-                .expiration(new Date(now.getTime() + accessTokenExpiration)) // 만료 시각
-                .signWith(secretKey)                 // 서명
+        JwtBuilder builder = Jwts.builder()
+                .issuer(jwtProperties.getIssuer())
+                .subject(String.valueOf(memberId))
+                .id(UUID.randomUUID().toString())
+                .claim(TOKEN_TYPE_CLAIM, tokenType.name())
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + expiration));
+
+        if (role != null) {
+            builder.claim(ROLE_CLAIM, role.name());
+        }
+
+        return builder
+                .signWith(secretKey)
                 .compact();
     }
 
-    public Long getMemberId(String token) {
+    public TokenPayload parseAccessToken(String token) {
+        return parseToken(token, TokenType.ACCESS);
+    }
+
+    public TokenPayload parseRefreshToken(String token) {
+        return parseToken(token, TokenType.REFRESH);
+    }
+
+    private TokenPayload parseToken(String token, TokenType expectedTokenType) {
         Claims claims = Jwts.parser()
+                .requireIssuer(jwtProperties.getIssuer())
                 .verifyWith(secretKey)
                 .build()
-                .parseSignedClaims(token)  // 서명, 만료 검증 → 실패 시 JwtException
+                .parseSignedClaims(token)
                 .getPayload();
 
-        return Long.valueOf(claims.getSubject());
+        TokenType actualTokenType = getTokenType(claims);
+
+        if (actualTokenType != expectedTokenType) {
+            throw new IllegalArgumentException("토큰 타입이 올바르지 않습니다.");
+        }
+
+        MemberRole role = actualTokenType == TokenType.ACCESS
+                ? getRole(claims)
+                : null;
+
+        return new TokenPayload(
+                Long.valueOf(claims.getSubject()),
+                claims.getId(),
+                actualTokenType,
+                role,
+                claims.getIssuedAt().toInstant(),
+                claims.getExpiration().toInstant()
+        );
+    }
+
+    private TokenType getTokenType(Claims claims) {
+        String tokenType = claims.get(TOKEN_TYPE_CLAIM, String.class);
+
+        if (tokenType == null) {
+            throw new IllegalArgumentException("토큰 타입이 없습니다.");
+        }
+
+        return TokenType.valueOf(tokenType);
+    }
+
+    private MemberRole getRole(Claims claims) {
+        String role = claims.get(ROLE_CLAIM, String.class);
+
+        if (role == null) {
+            throw new IllegalArgumentException("권한 정보가 없습니다.");
+        }
+
+        return MemberRole.valueOf(role);
     }
 }
